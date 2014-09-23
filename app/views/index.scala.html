@@ -1,16 +1,16 @@
 @(query: List[String])
 
 @main("Welcome to Play 2.0") {
-	
-	<h2>Live mixed-tweets</h2>
-	<p>Change Url parameters for new search</p>
+  
+  <h2>Live mixed-tweets</h2>
+  <p>Change Url parameters for new search</p>
 
   
-	@query.zipWithIndex.map { case(value, index) =>
-	  <h3> <span id="message@index"></span> </h3>
-	}    
+  @query.zipWithIndex.map { case(value, index) =>
+    <h3> <span id="message@index"></span> </h3>
+  }    
     
-	<script type="text/javascript" charset="utf-8">
+  <script type="text/javascript" charset="utf-8">
     var feed = new EventSource("@routes.Application.stream(query.mkString(","))");
       feed.addEventListener('message', function(event) {
         var result = event.data;
