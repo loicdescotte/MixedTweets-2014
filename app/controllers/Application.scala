@@ -1,39 +1,36 @@
 package controllers
 
-import play.api.mvc._
-import play.api.libs.oauth._
-import play.api.libs.ws.WS
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
-import play.api.Play.current
+import play.api.mvc.{Controller, Action}
 import play.api.libs.iteratee._
 import play.api.libs.json.JsValue
 import scala.concurrent.duration._
-import play.api.libs.iteratee.Concurrent
 import play.api.libs.json.Json
+import play.api.libs.EventSource
+import play.api.libs.json._
 import play.api.Logger
 import twitter4j._
+import twitter4j.{Status => TwitterStatus}
 import twitter4j.auth._
 import twitter4j.conf._
 import org.joda.time.DateTime
-import play.api.libs.EventSource
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class TwitterStreamListener(searchQuery: String, config: Configuration) {
  
-  val query = new FilterQuery(0, Array(), Array(this.searchQuery))
+  val query = new FilterQuery(0, Array(), Array(searchQuery))
  
   val twitterStream = new TwitterStreamFactory(config).getInstance
  
   def listenAndStream = {
     Logger.info(s"#start listener for $searchQuery")
  
-    val (enum, channel) = Concurrent.broadcast[String]
+    val (enum, channel) = Concurrent.broadcast[(String, TwitterStatus)]
  
     val statusListener = new StatusListener() {
  
-      override def onStatus(status: Status) = {      
+      override def onStatus(status: TwitterStatus) = {      
        Logger.debug(status.getText)  
-       channel.push(s"$searchQuery : ${status.getText} - ${status.getUser.getName}" )
+       channel push (searchQuery, status)
       }
  
       override def onDeletionNotice(statusDeletionNotice: StatusDeletionNotice) = {}
@@ -65,8 +62,8 @@ object Application extends Controller {
 
   val config = cb.build 
  
-  val upperCase = Enumeratee.map[String] {
-    tweet => tweet.toUpperCase
+  val upperCaseJson : Enumeratee[(String, TwitterStatus), JsValue] = Enumeratee.map[(String,TwitterStatus)] { case (searchQuery, status) =>
+    Json.obj("message" -> s"$searchQuery : ${status.getText}", "author" -> status.getUser.getName)
   }
   
   def stream(query: String) = Action {
@@ -78,8 +75,9 @@ object Application extends Controller {
     }
 
     val mixStreams = streams.reduce((s1,s2) => s1 interleave s2)
+    val jsonMixStreams = mixStreams through upperCaseJson
 
-    Ok.chunked(mixStreams through upperCase through EventSource()).as("text/event-stream")  
+    Ok.chunked(jsonMixStreams &> EventSource() ).as("text/event-stream")  
   } 
 
   def liveTweets(query: List[String]) = Action {        
