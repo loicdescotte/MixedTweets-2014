@@ -77,7 +77,7 @@ object Application extends Controller {
     val mixStreams = streams.reduce((s1,s2) => s1 interleave s2)
     val jsonMixStreams = mixStreams through upperCaseJson
 
-    Ok.chunked(jsonMixStreams &> EventSource() ).as("text/event-stream")  
+    Ok.chunked(jsonMixStreams through EventSource()).as("text/event-stream")  
   } 
 
   def liveTweets(query: List[String]) = Action {        
