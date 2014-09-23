@@ -54,7 +54,7 @@ class TwitterStreamListener(searchQuery: String, config: Configuration) {
   }
  
 }
-object Application extends Controller {	
+object Application extends Controller { 
 
   val cb = new ConfigurationBuilder()
   cb.setDebugEnabled(true)
@@ -65,31 +65,30 @@ object Application extends Controller {
 
   val config = cb.build 
  
-	val upperCase = Enumeratee.map[String] {
-	  tweet => tweet.toUpperCase
-	}
-	
-	def stream(query: String) = Action {
+  val upperCase = Enumeratee.map[String] {
+    tweet => tweet.toUpperCase
+  }
+  
+  def stream(query: String) = Action {
     val queries = query.split(",")
 
     val streams = queries.map { query => 
-       val twitterListener = new TwitterStreamListener(query, config)
-       twitterListener.listenAndStream
+      val twitterListener = new TwitterStreamListener(query, config)
+      twitterListener.listenAndStream
     }
 
     val mixStreams = streams.reduce((s1,s2) => s1 interleave s2)
 
-	  Ok.chunked(mixStreams through upperCase through EventSource()).as("text/event-stream")
-  
-	}	
+    Ok.chunked(mixStreams through upperCase through EventSource()).as("text/event-stream")  
+  } 
 
-	def liveTweets(query: List[String]) = Action {			  
-	  Ok(views.html.index(query))
-	}
+  def liveTweets(query: List[String]) = Action {        
+    Ok(views.html.index(query))
+  }
 
-	def index = Action {
-	  //default search	
-	  Redirect(routes.Application.liveTweets(List("java", "ruby")))
-	}
+  def index = Action {
+    //default search  
+    Redirect(routes.Application.liveTweets(List("java", "ruby")))
+  }
   
 }
