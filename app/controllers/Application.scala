@@ -62,7 +62,7 @@ object Application extends Controller {
 
   val config = cb.build 
  
-  val upperCaseJson : Enumeratee[(String, TwitterStatus), JsValue] = Enumeratee.map[(String,TwitterStatus)] { case (searchQuery, status) =>
+  val toJson : Enumeratee[(String, TwitterStatus), JsValue] = Enumeratee.map[(String,TwitterStatus)] { case (searchQuery, status) =>
     Json.obj("message" -> s"$searchQuery : ${status.getText}", "author" -> status.getUser.getName)
   }
   
@@ -75,7 +75,7 @@ object Application extends Controller {
     }
 
     val mixStreams = streams.reduce((s1,s2) => s1 interleave s2)
-    val jsonMixStreams = mixStreams through upperCaseJson
+    val jsonMixStreams = mixStreams through toJson
 
     Ok.chunked(jsonMixStreams through EventSource()).as("text/event-stream")  
   } 
